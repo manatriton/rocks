@@ -28,10 +28,10 @@ lazy_static! {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token<'a> {
-    kind: TokenKind,
-    lexeme: &'a str,
-    literal: Literal<'a>,
-    line: usize,
+    pub kind: TokenKind,
+    pub lexeme: &'a str,
+    pub literal: Literal<'a>,
+    pub line: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -291,15 +291,68 @@ impl<'a> Iterator for Tokenizer<'a> {
         }
 
         loop {
-            match self.peek_char() {
-                Some(' ' | '\r' | '\t') => {
-                    self.next_char();
-                }
-                Some('\n') => {
-                    self.line += 1;
-                    self.next_char();
-                }
-                Some(_) => break,
+            self.start = self.current;
+            match self.next_char() {
+                Some(ch) => match ch {
+                    '(' => return Some(self.simple_token(TokenKind::LeftParen)),
+                    ')' => return Some(self.simple_token(TokenKind::RightParen)),
+                    '{' => return Some(self.simple_token(TokenKind::LeftBrace)),
+                    '}' => return Some(self.simple_token(TokenKind::RightBrace)),
+                    ',' => return Some(self.simple_token(TokenKind::Comma)),
+                    '.' => return Some(self.simple_token(TokenKind::Dot)),
+                    '-' => return Some(self.simple_token(TokenKind::Minus)),
+                    '+' => return Some(self.simple_token(TokenKind::Plus)),
+                    ';' => return Some(self.simple_token(TokenKind::Semicolon)),
+                    '*' => return Some(self.simple_token(TokenKind::Star)),
+                    '!' => {
+                        return Some(match self.next_if('=') {
+                            Some(_) => self.simple_token(TokenKind::BangEqual),
+                            None => self.simple_token(TokenKind::Bang),
+                        })
+                    }
+                    '=' => {
+                        return Some(match self.next_if('=') {
+                            Some(_) => self.simple_token(TokenKind::EqualEqual),
+                            None => self.simple_token(TokenKind::Equal),
+                        })
+                    }
+                    '<' => {
+                        return Some(match self.next_if('=') {
+                            Some(_) => self.simple_token(TokenKind::LessEqual),
+                            None => self.simple_token(TokenKind::Less),
+                        })
+                    }
+                    '>' => {
+                        return Some(match self.next_if('=') {
+                            Some(_) => self.simple_token(TokenKind::GreaterEqual),
+                            None => self.simple_token(TokenKind::Greater),
+                        })
+                    }
+                    '"' => return self.string(),
+                    '/' => {
+                        if let Some('/') = self.peek_char() {
+                            self.next_char();
+                            loop {
+                                match self.peek_char() {
+                                    Some('\n') => break,
+                                    Some(_) => {
+                                        self.next_char();
+                                    }
+                                    None => break,
+                                }
+                            }
+                        } else {
+                            return Some(self.simple_token(TokenKind::Slash));
+                        }
+                    }
+                    'a'..='z' | 'A'..='Z' => return Some(self.identifier()),
+                    '0'..='9' => return Some(self.number()),
+                    ' ' | '\r' | '\t' => {}
+                    '\n' => {
+                        self.line += 1;
+                    }
+                    _ => break None,
+                },
                 None => {
                     self.sent_eof = true;
                     return Some(Token {
@@ -311,40 +364,6 @@ impl<'a> Iterator for Tokenizer<'a> {
                 }
             }
         }
-
-        self.start = self.current;
-        self.next_char().and_then(|ch| match ch {
-            '(' => Some(self.simple_token(TokenKind::LeftParen)),
-            ')' => Some(self.simple_token(TokenKind::RightParen)),
-            '{' => Some(self.simple_token(TokenKind::LeftBrace)),
-            '}' => Some(self.simple_token(TokenKind::RightBrace)),
-            ',' => Some(self.simple_token(TokenKind::Comma)),
-            '.' => Some(self.simple_token(TokenKind::Dot)),
-            '-' => Some(self.simple_token(TokenKind::Minus)),
-            '+' => Some(self.simple_token(TokenKind::Plus)),
-            ';' => Some(self.simple_token(TokenKind::Semicolon)),
-            '*' => Some(self.simple_token(TokenKind::Star)),
-            '!' => Some(match self.next_if('=') {
-                Some(_) => self.simple_token(TokenKind::BangEqual),
-                None => self.simple_token(TokenKind::Bang),
-            }),
-            '=' => Some(match self.next_if('=') {
-                Some(_) => self.simple_token(TokenKind::EqualEqual),
-                None => self.simple_token(TokenKind::Equal),
-            }),
-            '<' => Some(match self.next_if('=') {
-                Some(_) => self.simple_token(TokenKind::LessEqual),
-                None => self.simple_token(TokenKind::Less),
-            }),
-            '>' => Some(match self.next_if('=') {
-                Some(_) => self.simple_token(TokenKind::GreaterEqual),
-                None => self.simple_token(TokenKind::Greater),
-            }),
-            '"' => self.string(),
-            'a'..='z' | 'A'..='Z' => Some(self.identifier()),
-            '0'..='9' => Some(self.number()),
-            _ => None,
-        })
     }
 }
 
@@ -370,7 +389,8 @@ mod tests {
 "hello" ""
 var x = "hello"
 var y = 3.6
-"#;
+// This is a comment.
+"world""#;
 
         let mut tok = Tokenizer::new(src);
         assert_eq!(
@@ -537,9 +557,18 @@ var y = 3.6
         );
         assert_eq!(
             Some(Token {
+                kind: TokenKind::String,
+                lexeme: "\"world\"",
+                line: 7,
+                literal: Literal::String("world"),
+            }),
+            tok.next()
+        );
+        assert_eq!(
+            Some(Token {
                 kind: TokenKind::Eof,
                 lexeme: "",
-                line: 6,
+                line: 7,
                 literal: Literal::None,
             }),
             tok.next()

@@ -1,12 +1,10 @@
-use crate::token::Tokenizer;
+use rocks::token::Tokenizer;
 use std::env;
 use std::error;
 use std::fs;
 use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
-
-mod token;
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     let args = env::args().skip(1).collect::<Vec<_>>();
