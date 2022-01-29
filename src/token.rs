@@ -89,6 +89,7 @@ pub enum TokenKind {
 pub enum Literal<'a> {
     String(&'a str),
     Number(f64),
+    Boolean(bool),
     None,
 }
 
