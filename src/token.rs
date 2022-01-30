@@ -346,6 +346,9 @@ impl<'a> Iterator for Tokenizer<'a> {
                                     None => break,
                                 }
                             }
+                        } else if let Some('*') = self.peek_char() {
+                            self.next_char();
+                            let mut level = 1;
                         } else {
                             return Some(self.simple_token(TokenKind::Slash));
                         }

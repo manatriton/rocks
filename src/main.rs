@@ -1,5 +1,6 @@
 use rocks::{
     ast::{debug::AstFormatter, Parser},
+    interpreter::Interpreter,
     token::Tokenizer,
 };
 use std::env;
@@ -36,19 +37,22 @@ fn run_prompt() -> Result<(), io::Error> {
     Ok(())
 }
 
-fn run(src: &str) {
+fn run(src: &str) -> Result<(), Box<dyn error::Error>> {
     let tokenizer = Tokenizer::new(src);
     let parser = Parser::new(tokenizer);
-    let mut f = AstFormatter;
+    let mut repl = Interpreter;
 
     for result in parser {
         match &result {
-            Ok(expr) => {
-                println!("{}", f.format(expr));
-            }
+            Ok(expr) => match repl.evaluate(expr) {
+                Ok(val) => println!("{}", val),
+                Err(err) => println!("{}", err),
+            },
             Err(err) => println!("{}", err),
         }
     }
+
+    Ok(())
 }
 
 // fn report()
