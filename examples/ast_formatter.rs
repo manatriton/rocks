@@ -1,5 +1,5 @@
 use rocks::{
-    ast::{AstFormatter, Expr},
+    ast::{debug::AstFormatter, Expr},
     token::{Literal, Token, TokenKind},
 };
 

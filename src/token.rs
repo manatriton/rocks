@@ -48,6 +48,8 @@ pub enum TokenKind {
     Semicolon,
     Slash,
     Star,
+    Question,
+    Colon,
 
     // One or two character tokens.
     Bang,
@@ -305,6 +307,8 @@ impl<'a> Iterator for Tokenizer<'a> {
                     '+' => return Some(self.simple_token(TokenKind::Plus)),
                     ';' => return Some(self.simple_token(TokenKind::Semicolon)),
                     '*' => return Some(self.simple_token(TokenKind::Star)),
+                    '?' => return Some(self.simple_token(TokenKind::Question)),
+                    ':' => return Some(self.simple_token(TokenKind::Colon)),
                     '!' => {
                         return Some(match self.next_if('=') {
                             Some(_) => self.simple_token(TokenKind::BangEqual),

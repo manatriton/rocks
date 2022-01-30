@@ -1,15 +1,17 @@
-use rocks::token::Tokenizer;
+use rocks::{
+    ast::{debug::AstFormatter, Parser},
+    token::Tokenizer,
+};
 use std::env;
 use std::error;
 use std::fs;
-use std::io;
-use std::io::BufRead;
-use std::io::BufReader;
+use std::io::{self, BufRead, BufReader};
 
 fn main() -> Result<(), Box<dyn error::Error>> {
     let args = env::args().skip(1).collect::<Vec<_>>();
     if args.len() > 1 {
         println!("Usage: rocks [script]");
+        return Ok(());
     }
 
     if !args.is_empty() {
@@ -36,8 +38,16 @@ fn run_prompt() -> Result<(), io::Error> {
 
 fn run(src: &str) {
     let tokenizer = Tokenizer::new(src);
-    for tok in tokenizer {
-        println!("{:?}", tok);
+    let parser = Parser::new(tokenizer);
+    let mut f = AstFormatter;
+
+    for result in parser {
+        match &result {
+            Ok(expr) => {
+                println!("{}", f.format(expr));
+            }
+            Err(err) => println!("{}", err),
+        }
     }
 }
 
